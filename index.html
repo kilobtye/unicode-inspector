@@ -26,15 +26,53 @@
 		
 	</style>
 
-	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js" type="text/javascript" charset="utf-8"></script>
+	<script src="http://code.jquery.com/jquery-2.1.1.min.js" type="text/javascript" charset="utf-8"></script>
 	<script src="punycode.min.js" type="text/javascript" charset="utf-8"></script>
 
 	<script type="text/javascript" charset="utf-8">
 		$(document).ready(function() {
 			$("textarea").focus();
-
+			var preLen = 0;
 			$("textarea").on("input", function() {
+				function isHex(char) {
+					if ((char >= "0" && char <= "9") || (char >= "A" && char <= "F") || (char >= "a" && char <= "f")) {
+						return true;
+					} else {
+						return false;
+					}
+				}
+				function isUnicode(str, pos) {
+					if (pos < 6) {
+						return false;
+					}
+					if ((str[pos-6] === "U" || str[pos-6] === "u") && str[pos-5] === "+") {
+						for (var j = pos - 4; j < pos; j++) {
+							if (!isHex(str[j])) {
+								return false;
+							}
+						}
+						return true;
+					} else {
+						return false;
+					}
+				}
+				function decode(str) {
+					var codepoint = Number("0x" + str);
+					return String.fromCharCode(codepoint);
+				}
 				var input = $("textarea").val();
+				var len = input.length;
+				if (len === preLen + 1 || len === preLen + 6) {
+					var pos = $("textarea")[0].selectionStart;
+					if (isUnicode(input, pos)) {
+						char = decode(input.substr(pos - 4, 4))
+						input = input.substr(0, pos - 6) + char + input.substr(pos)
+						$("textarea").val(input);
+						$("textarea")[0].selectionStart = pos - 5;
+						$("textarea")[0].selectionEnd = pos - 5;
+					}
+				}
+				preLen = len;
 				var hexList = punycode.ucs2.decode(input);
 				var outputList = [];
 				for (var i=0; i<hexList.length; i++) {
@@ -71,6 +109,20 @@
 				}
 				$("#output").html(outputList.join(" "));
 			});
+
+			var placeHolder = "Hahau+263a";
+			var idx = 0;
+			function type() {
+				input = $("textarea").val();
+				input += placeHolder[idx];
+				$("textarea").val(input);
+				$("textarea").trigger("input");
+				idx++;
+				if (idx < placeHolder.length) {
+					setTimeout(type, 400)
+				}
+			}
+			setTimeout(type, 800);
 		});
 	</script>
 
